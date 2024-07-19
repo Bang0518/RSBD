@@ -33,11 +33,24 @@ val_sparse = build_sparse_matrix(val)
 def evaluate_model(model, val_sparse, K=10):
     user_count, item_count = val_sparse.shape
     precision_at_k = []
+    hit_rate = []
+    ndcg_at_k = []
     for user in range(user_count):
         val_items = val_sparse.tocsr()[user].indices
+        if len(val_items) == 0:
+            continue
         recommended_items = model.recommend(user, val_sparse.tocsr(), N=K, filter_already_liked_items=False)[0]
-        precision_at_k.append(np.isin(recommended_items, val_items).sum() / K)
-    return np.mean(precision_at_k)
+        hits = len(set(recommended_items) & set(val_items))
+        precision_at_k.append(hits / K)
+        hit_rate.append(hits / min(len(val_items), K))
+        
+        # 计算NDCG
+        rel_scores = [1 if item in val_items else 0 for item in recommended_items]
+        idcg = sum([1.0 / np.log2(i + 2) for i in range(min(len(val_items), K))])
+        dcg = sum([rel / np.log2(idx + 2) for idx, rel in enumerate(rel_scores)])
+        ndcg_at_k.append(dcg / idcg)
+    
+    return np.mean(precision_at_k), np.mean(hit_rate), np.mean(ndcg_at_k)
 
 # 训练模型并评估
 models = {
@@ -52,17 +65,32 @@ for name, model in models.items():
 
 # 绘制性能比较图
 def plot_results(results):
-    plt.figure(figsize=(8, 5))
-    plt.bar(results.keys(), results.values(), color='skyblue')
-    plt.xlabel('Model')
-    plt.ylabel('Precision@K')
-    plt.title('Model Performance Comparison')
+    precisions = {name: result[0] for name, result in results.items()}
+    hit_rates = {name: result[1] for name, result in results.items()}
+    ndcgs = {name: result[2] for name, result in results.items()}
+    
+    fig, ax = plt.subplots(1, 3, figsize=(18, 5))
+    ax[0].bar(precisions.keys(), precisions.values(), color='skyblue')
+    ax[0].set_xlabel('Model')
+    ax[0].set_ylabel('Precision@K')
+    ax[0].set_title('Precision at K Comparison')
+    
+    ax[1].bar(hit_rates.keys(), hit_rates.values(), color='lightgreen')
+    ax[1].set_xlabel('Model')
+    ax[1].set_ylabel('HR@K')
+    ax[1].set_title('Hit Rate at K Comparison')
+    
+    ax[2].bar(ndcgs.keys(), ndcgs.values(), color='salmon')
+    ax[2].set_xlabel('Model')
+    ax[2].set_ylabel('NDCG@K')
+    ax[2].set_title('NDCG at K Comparison')
+    
     plt.show()
 
 plot_results(results)
 
 # 选择最佳模型
-best_model_name = max(results, key=results.get)
+best_model_name = max(results, key=lambda x: results[x][0])
 best_model = models[best_model_name]
 print(f"Best model: {best_model_name}")
 
