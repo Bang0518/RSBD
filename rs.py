@@ -19,6 +19,24 @@ train_data["user_id"] = train_data["user_id"].map(user_id_map)
 train_data["item_id"] = train_data["item_id"].map(item_id_map)
 test_data["user_id"] = test_data["user_id"].map(user_id_map)
 
+# 负采样
+def negative_sampling(df, num_samples):
+    users = df["user_id"].values
+    items = df["item_id"].values
+    negative_samples = []
+    for _ in range(num_samples):
+        user = np.random.choice(users)
+        item = np.random.choice(items)
+        while (df[(df["user_id"] == user) & (df["item_id"] == item)].shape[0] > 0):
+            user = np.random.choice(users)
+            item = np.random.choice(items)
+        negative_samples.append([user, item, 1])
+    return pd.DataFrame(negative_samples, columns=["user_id", "item_id", "click"])
+
+neg_samples = negative_sampling(train_data, len(train_data))
+train_data["click"] = 5
+train_data = pd.concat([train_data, neg_samples])
+
 # 划分数据集
 train, val = train_test_split(train_data, test_size=0.2, random_state=42)
 
@@ -33,24 +51,24 @@ val_sparse = build_sparse_matrix(val)
 def evaluate_model(model, val_sparse, K=10):
     user_count, item_count = val_sparse.shape
     precision_at_k = []
-    hit_rate = []
+    recall_at_k = []
     ndcg_at_k = []
     for user in range(user_count):
         val_items = val_sparse.tocsr()[user].indices
         if len(val_items) == 0:
             continue
-        recommended_items = model.recommend(user, val_sparse.tocsr(), N=K, filter_already_liked_items=False)[0]
+        recommended_items = model.recommend(user, val_sparse.tocsr(), N=K, filter_already_liked_items=False)[0].tolist()
         hits = len(set(recommended_items) & set(val_items))
         precision_at_k.append(hits / K)
-        hit_rate.append(hits / min(len(val_items), K))
+        recall_at_k.append(hits / len(val_items))
         
         # 计算NDCG
         rel_scores = [1 if item in val_items else 0 for item in recommended_items]
         idcg = sum([1.0 / np.log2(i + 2) for i in range(min(len(val_items), K))])
         dcg = sum([rel / np.log2(idx + 2) for idx, rel in enumerate(rel_scores)])
-        ndcg_at_k.append(dcg / idcg)
+        ndcg_at_k.append(dcg / idcg if idcg > 0 else 0)
     
-    return np.mean(precision_at_k), np.mean(hit_rate), np.mean(ndcg_at_k)
+    return np.mean(precision_at_k), np.mean(recall_at_k), np.mean(ndcg_at_k)
 
 # 训练模型并评估
 models = {
@@ -66,7 +84,7 @@ for name, model in models.items():
 # 绘制性能比较图
 def plot_results(results):
     precisions = {name: result[0] for name, result in results.items()}
-    hit_rates = {name: result[1] for name, result in results.items()}
+    recalls = {name: result[1] for name, result in results.items()}
     ndcgs = {name: result[2] for name, result in results.items()}
     
     fig, ax = plt.subplots(1, 3, figsize=(18, 5))
@@ -75,10 +93,10 @@ def plot_results(results):
     ax[0].set_ylabel('Precision@K')
     ax[0].set_title('Precision at K Comparison')
     
-    ax[1].bar(hit_rates.keys(), hit_rates.values(), color='lightgreen')
+    ax[1].bar(recalls.keys(), recalls.values(), color='lightgreen')
     ax[1].set_xlabel('Model')
-    ax[1].set_ylabel('HR@K')
-    ax[1].set_title('Hit Rate at K Comparison')
+    ax[1].set_ylabel('Recall@K')
+    ax[1].set_title('Recall at K Comparison')
     
     ax[2].bar(ndcgs.keys(), ndcgs.values(), color='salmon')
     ax[2].set_xlabel('Model')
@@ -100,7 +118,7 @@ test_user_ids = test_data["user_id"].unique()
 recommendations = {}
 
 for user_id in test_user_ids:
-    recommended_items = best_model.recommend(user_id, train_sparse.T, N=10, filter_already_liked_items=False)[0]
+    recommended_items = best_model.recommend(user_id, train_sparse.T, N=10, filter_already_liked_items=False)[0].tolist()
     original_user_id = list(user_id_map.keys())[list(user_id_map.values()).index(user_id)]
     original_item_ids = [list(item_id_map.keys())[list(item_id_map.values()).index(item)] for item in recommended_items]
     recommendations[original_user_id] = original_item_ids
