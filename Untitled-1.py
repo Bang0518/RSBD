@@ -13,7 +13,7 @@ plt.rcParams["font.family"] = "Times New Roman"
 epsilon = 50  # Learning rate 学习率
 momentum = 0.7  # Momentum parameter 动量优化参数
 epoch = 1  # Initial epoch 初始化epoch
-maxepoch = 30  # Total number of training epochs 总训练次数
+maxepoch = 50  # Total number of training epochs 总训练次数
 err_train = np.zeros(maxepoch)  # Training error 训练误差
 err_valid = np.zeros(maxepoch)  # Validation error 验证误差
 err_random = np.zeros(maxepoch)  # Random error 随机误差
@@ -70,7 +70,7 @@ data = data.sample(frac=1).reset_index(drop=True)  # 打乱数据集
 
 # In[5]:
 
-
+# 稀疏度
 sparsity = data_num / (movie_num * user_num)
 print(f"Sparsity: {sparsity:.6f}")
 
@@ -92,10 +92,11 @@ num_p = user_num
 # In[7]:
 
 
-w1_M1 = 0.1 * np.random.rand(num_m, num_feat)
-w1_P1 = 0.1 * np.random.rand(num_p, num_feat)
-w1_M1_inc = np.zeros((num_m, num_feat))
-w1_P1_inc = np.zeros((num_p, num_feat))
+# 初始化矩阵参数
+w1_M1 = 0.1 * np.random.rand(num_m, num_feat)  # 电影特征矩阵，维度为(num_m, num_feat)
+w1_P1 = 0.1 * np.random.rand(num_p, num_feat)  # 用户特征矩阵，维度为(num_p, num_feat)
+w1_M1_inc = np.zeros((num_m, num_feat))  # 电影特征矩阵的增量，用于动量优化，初始化为零矩阵
+w1_P1_inc = np.zeros((num_p, num_feat))  # 用户特征矩阵的增量，用于动量优化，初始化为零矩阵
 
 
 # In[8]:
