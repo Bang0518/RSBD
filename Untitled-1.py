@@ -257,15 +257,17 @@ record = []  # 存储推荐结果的列表
 for i in test["user_id"]:
     user_i_rating = np.dot(w1_P1[i - 1, :], w1_M1.T) + mean_rating
     used = data[data["user_id"] == i]["item_id"].values - 1
-    user_i_rating[used] = 0  # 将的评分设为0
+    user_i_rating[used] = 0  # 将已评分的电影的评分设为0
     top_k_movies = np.argsort(user_i_rating)[-k:][::-1] + 1
-    record.append(top_k_movies)  # 将推荐结果加入列表
+    record.append((i, top_k_movies))  # 将用户ID和推荐结果加入列表
 
-# 将推荐结果与测试集用户结合
-record_df = pd.DataFrame(
-    record, columns=[f"recommended_movie_{k}" for k in range(1, k + 1)]
-)  # 创建推荐结果的DataFrame
-final_result = pd.concat([test, record_df], axis=1)  # 合并测试集用户和推荐结果
+# 将推荐结果转换为指定格式的字符串
+result_lines = []
+for user_id, movies in record:
+    movies_str = ",".join(map(str, movies))
+    result_lines.append(f"{user_id}: {movies_str}")
 
-# 保存到CSV文件
-final_result.to_csv("data/result.csv", index=False)  # 将最终结果保存为CSV文件
+# 将结果保存到TXT文件
+with open("data/result.txt", "w") as file:
+    for line in result_lines:
+        file.write(line + "\n")
