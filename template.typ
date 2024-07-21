@@ -94,11 +94,11 @@
   let blank_par = par()[#text()[#v(0em, weak: true)];#text()[#h(0em)]]
 
   show figure: it => [
-    #v(12pt)
+    // #v(8pt)
     #set text(font: caption-font)
     #it
     #blank_par
-    #v(12pt)
+    // #v(8pt)
   ]
 
   show image: it => [

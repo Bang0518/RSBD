@@ -17,7 +17,7 @@ maxepoch = 50  # Total number of training epochs 总训练次数
 err_train = np.zeros(maxepoch)  # Training error 训练误差
 err_valid = np.zeros(maxepoch)  # Validation error 验证误差
 err_random = np.zeros(maxepoch)  # Random error 随机误差
-num_feat = 8  # Number of latent factors 隐因子数量
+num_feat = 10  # Number of latent factors 隐因子数量
 N = 10000  # Number of training triplets per epoch 每次训练三元组的数量
 
 

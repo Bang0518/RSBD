@@ -52,7 +52,6 @@ def evaluate_model(model, val_sparse, K=10):
     user_count, item_count = val_sparse.shape
     precision_at_k = []
     recall_at_k = []
-    ndcg_at_k = []
     for user in range(user_count):
         val_items = val_sparse.tocsr()[user].indices
         if len(val_items) == 0:
@@ -61,14 +60,8 @@ def evaluate_model(model, val_sparse, K=10):
         hits = len(set(recommended_items) & set(val_items))
         precision_at_k.append(hits / K)
         recall_at_k.append(hits / len(val_items))
-        
-        # 计算NDCG
-        rel_scores = [1 if item in val_items else 0 for item in recommended_items]
-        idcg = sum([1.0 / np.log2(i + 2) for i in range(min(len(val_items), K))])
-        dcg = sum([rel / np.log2(idx + 2) for idx, rel in enumerate(rel_scores)])
-        ndcg_at_k.append(dcg / idcg if idcg > 0 else 0)
     
-    return np.mean(precision_at_k), np.mean(recall_at_k), np.mean(ndcg_at_k)
+    return np.mean(precision_at_k), np.mean(recall_at_k)
 
 # 训练模型并评估
 models = {
@@ -83,11 +76,13 @@ for name, model in models.items():
 
 # 绘制性能比较图
 def plot_results(results):
+    plt.rcParams["font.family"] = "Times New Roman"
+    
     precisions = {name: result[0] for name, result in results.items()}
     recalls = {name: result[1] for name, result in results.items()}
-    ndcgs = {name: result[2] for name, result in results.items()}
     
-    fig, ax = plt.subplots(1, 3, figsize=(18, 5))
+    fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+    
     ax[0].bar(precisions.keys(), precisions.values(), color='skyblue')
     ax[0].set_xlabel('Model')
     ax[0].set_ylabel('Precision@K')
@@ -98,32 +93,6 @@ def plot_results(results):
     ax[1].set_ylabel('Recall@K')
     ax[1].set_title('Recall at K Comparison')
     
-    ax[2].bar(ndcgs.keys(), ndcgs.values(), color='salmon')
-    ax[2].set_xlabel('Model')
-    ax[2].set_ylabel('NDCG@K')
-    ax[2].set_title('NDCG at K Comparison')
-    
     plt.show()
 
 plot_results(results)
-
-# 选择最佳模型
-best_model_name = max(results, key=lambda x: results[x][0])
-best_model = models[best_model_name]
-print(f"Best model: {best_model_name}")
-
-# 使用最佳模型生成推荐
-best_model.fit(train_sparse.T)
-test_user_ids = test_data["user_id"].unique()
-recommendations = {}
-
-for user_id in test_user_ids:
-    recommended_items = best_model.recommend(user_id, train_sparse.T, N=10, filter_already_liked_items=False)[0].tolist()
-    original_user_id = list(user_id_map.keys())[list(user_id_map.values()).index(user_id)]
-    original_item_ids = [list(item_id_map.keys())[list(item_id_map.values()).index(item)] for item in recommended_items]
-    recommendations[original_user_id] = original_item_ids
-
-# 保存结果
-with open(data_path + "result.txt", "w") as f:
-    for user_id, items in recommendations.items():
-        f.write(f"{user_id}: {','.join(map(str, items))}\n")

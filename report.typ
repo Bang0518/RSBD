@@ -28,17 +28,15 @@ result.txt是算法得到的结果，即对test.txt中的用户一一进行Top-1
 
 本实验包括以下几个步骤，每个部分都有明确的功能，最终实现了一个基于矩阵分解的推荐系统。
 
-1.数据加载与预处理。这部分代码加载训练数据，进行负采样来生成负样本，并将正负样本结合后打乱顺序。
++ 数据加载与预处理。这部分代码加载训练数据，进行负采样来生成负样本，并将正负样本结合后打乱顺序。
++ 数据集划分和稀疏度计算。计算了数据的稀疏度，并划分了训练集和验证集，计算了平均评分。
++ 初始化矩阵参数。初始化了用户和电影的特征矩阵及其增量矩阵。
++ 训练模型。实现了模型的训练过程，包括特征矩阵的更新、训练误差和验证误差的计算，并绘制了误差曲线。
++ Precision@10和Recall@10计算。这部分代码计算了Precision@10和Recall@10两个评价指标。
++ 推荐结果生成与保存。这部分代码对测试集用户生成推荐结果，并将结果保存为txt文件。
+  
+== 代码清单
 
-2.数据集划分和稀疏度计算。计算了数据的稀疏度，并划分了训练集和验证集，计算了平均评分。
-
-3.初始化矩阵参数。初始化了用户和电影的特征矩阵及其增量矩阵。
-
-4.训练模型。实现了模型的训练过程，包括特征矩阵的更新、训练误差和验证误差的计算，并绘制了误差曲线。
-
-5.Precision@10和Recall@10计算。这部分代码计算了Precision@10和Recall@10两个评价指标。
-
-6.推荐结果生成与保存。这部分代码对测试集用户生成推荐结果，并将结果保存为txt文件。
 == 实验环境 <environment>
 
 本实验使用的环境如下：
@@ -290,73 +288,88 @@ with open("data/result.txt", "w") as file:
     for line in result_lines:
         file.write(line + "\n")
 ```
-= 使用示例 <example>
+= 结果分析 <example>
 
-== 特殊标记 <bug1>
+== 参数设定
 
+本实验的所用的参数如下，学习率（epsilon=50）控制每次参数更新的步长，动量参数（momentum=0.7）加速收敛并减少震荡；初始epoch（epoch=1）和总训练次数（maxepoch=50）决定训练迭代的轮数；训练误差和验证误差数组（err_train和err_valid）分别用于记录每个epoch结束时的训练和验证误差，以监控模型表现；隐因子数量（num_feat=8）决定特征向量的维度，影响模型复杂度和推荐效果；每次训练三元组的数量（N=10000）设定了每个batch的大小，确保有效利用内存处理大规模数据。
+
+```python
+epsilon = 50  # Learning rate 学习率
+momentum = 0.7  # Momentum parameter 动量优化参数
+epoch = 1  # Initial epoch 初始化epoch
+maxepoch = 50  # Total number of training epochs 总训练次数
+err_train = np.zeros(maxepoch)  # Training error 训练误差
+err_valid = np.zeros(maxepoch)  # Validation error 验证误差
+err_random = np.zeros(maxepoch)  # Random error 随机误差
+num_feat = 8  # Number of latent factors 隐因子数量
+N = 10000  # Number of training triplets per epoch 每次训练三元组的数量
+```
 你可以 Typst 的语法对文本进行特殊标记，模板设定了几种语法的样式：*突出*、_强调_、引用@example。
 
+== 训练集表现
 
-== 图片
+分别设定num_feat的值为6，8，10来探究训练集上的表现，如@nf6、@nf8、@nf10。可以看到训练误差（Train Error）随着训练次数的增加，训练误差逐渐下降并趋于稳定，说明模型在训练数据上的拟合效果越来越好。但是随着隐因子数量的增加，验证误差（Validation Error）在初期也随训练次数的增加而下降，但在某个点之后开始趋于平稳甚至略有上升。这表明增加隐因子数量虽然可以提高训练数据上的拟合效果，但对验证数据的泛化能力提升有限，甚至可能导致过拟合。
 
-图片标题默认设置了方正楷体，效果如@img1 如果你想要使用其他字体，你可以自行修改模版。
-
-#figure(image("images/nju-emblem.svg"),
+#figure(image("images/num_feats_6.png"),
   caption: [
-    示例图片
+    num_feat = 6 的 Loss 曲线
   ],
-)<img1>
+)<nf6>
 
-图片后的文字。
+#figure(image("images/num_feats_8.png"),
+  caption: [
+    num_feat = 8 的 Loss 曲线
+  ],
+)<nf8>
 
-== 表格
+#figure(image("images/num_feats_10.png"),
+  caption: [
+    num_feat = 10 的 Loss 曲线
+  ],
+)<nf10>
+
+如@table1 所示，在五个随机种子下进行了不同测试以消除偶然性。隐因子数量为6时，模型在Pre@10和Re@10两个指标上的表现最好，表明此时模型的推荐效果较优。增加隐因子数量到8或10并未显著提升模型性能，反而有所下降。
 
 #figure(
   table(
-    columns: (auto, 1fr, 1fr, 1fr, 1fr, 1fr),
+    columns: (auto, 1fr, 1fr),
     inset: 10pt,
     align: horizon,
-    [], [周一], [周二],[周三],[周四],[周五],
-    "早上", "编译原理", "操作系统", "计算机网络", "操作系统", "计算机网络",
-    "下午", "数据挖掘", "计算机网络", "操作系统", "计算机网络", "分布式系统"
+    [隐因子数量], [Pre@10], [Re@10],
+    "6", "0.5876", "0.5903",
+    "8", "0.5394", "0.5415",
+    "10","0.5669", "0.5689"
   ),
-  caption: "示例表格"
-)
+  caption: "不同隐因子的Pre@10和Re@10"
+)<table1>
 
-表格后的文字。
 
-== 代码
+== 与其他模型的对比
 
-我们为代码添加了如下简单的样式。
+采用ALS与BPR模型作为baseline，与本模型进行对比。从@baseline 中可以观察到ALS（Alternating Least Squares）和BPR（Bayesian Personalized Ranking）两种模型在Precision@10和Recall@10指标上的表现。
 
-```c
-#include <stdio.h>
-int main()
-{
-   // printf() 中字符串需要引号
-   printf("Hello, World!");
-   return 0;
-}
-```
+#figure(image("images/baseline.png"),
+  caption: [
+    ALS与BPR模型的表现
+  ],
+)<baseline>
 
-代码后的文字。
+=== Pre@10比较
 
-== 列表
+- 本模型：隐因子数量为6时的Pre@10最高，为0.5876；隐因子数量为10时，Pre@10也较高，为0.5669。
+- ALS模型：Pre@10值较低，约为0.025。
+- BPR模型：Pre@10值较高，约为0.04，但仍远低于本模型的表现。
+=== Re@10比较
+- 本模型：隐因子数量为6时的Re@10最高，为0.5903；隐因子数量为10时，Re@10也较高，为0.5689。
+- ALS模型：Re@10值较低，约为0.01。
+- BPR模型：Re@10值较高，约为0.022，但仍远低于本模型的表现。
+  
+从对比中可以明显看出，本模型在不同隐因子数量下的Pre@10和Re@10指标均显著高于ALS和BPR模型。这表明在推荐系统的前10个推荐项中，本模型的推荐准确性和召回率远高于ALS和BPR模型，特别是在隐因子数量为6和10时表现最佳。
 
-下面是有序列表的示例：
+= 实验总结
 
-+ 第一项
-+ 第二项
-+ 第三项
+在本次实验中，我对比了不同推荐算法和模型在隐性反馈数据上的表现，重点评估了本模型、ALS（Alternating Least Squares）模型和BPR（Bayesian Personalized Ranking）模型在Precision@10和Recall@10两个指标上的表现。
 
-列表后的文字。
+从实验结果中可以明显看出，本模型在不同隐因子数量配置下的Precision@10和Recall@10指标均显著优于ALS和BPR模型。特别是在隐因子数量为6和10时，本模型的推荐准确性和召回率表现最佳。这表明本模型在处理隐性反馈数据时具有较强的优势，能够提供更为精准和全面的推荐结果。
 
-下面是无序列表的示例：
-
-- 第一项
-- 第二项
-- 第三项
-
-无序列表后的文字。
-
-#bibliography("ref.bib")
