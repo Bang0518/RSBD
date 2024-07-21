@@ -17,7 +17,7 @@ maxepoch = 50  # Total number of training epochs 总训练次数
 err_train = np.zeros(maxepoch)  # Training error 训练误差
 err_valid = np.zeros(maxepoch)  # Validation error 验证误差
 err_random = np.zeros(maxepoch)  # Random error 随机误差
-num_feat = 10  # Number of latent factors 隐因子数量
+num_feat = 8  # Number of latent factors 隐因子数量
 N = 10000  # Number of training triplets per epoch 每次训练三元组的数量
 
 
@@ -105,57 +105,63 @@ w1_P1_inc = np.zeros((num_p, num_feat))  # 用户特征矩阵的增量，用于�
 # 训练模型
 for epoch in range(maxepoch):
     for batch in range(numbatches):
+        # 计算当前批次的起始和结束索引
         start = batch * N
         end = start + N
-        if end > pairs_tr:
+        if end > pairs_tr:  # 防止越界
             end = pairs_tr
 
+        # 提取当前批次的用户和物品ID，并将它们的索引减1以匹配矩阵
         aa_p = train_vec.iloc[start:end]["user_id"].values - 1
         aa_m = train_vec.iloc[start:end]["item_id"].values - 1
-        rating = train_vec.iloc[start:end]["click"].values.astype(
-            float
-        )  # 确保 rating 为浮点数
-        rating -= mean_rating
+        rating = train_vec.iloc[start:end]["click"].values.astype(float)  # 确保rating为浮点数
+        rating -= mean_rating  # 减去平均评分
 
+        # 计算预测评分
         pred_out = np.sum(w1_M1[aa_m] * w1_P1[aa_p], axis=1)
-        f = np.sum((pred_out - rating) ** 2)
+        f = np.sum((pred_out - rating) ** 2)  # 计算误差平方和
 
+        # 计算梯度
         IO = 2 * (pred_out - rating)
-        IO = np.tile(IO[:, None], num_feat)
+        IO = np.tile(IO[:, None], num_feat)  # 将IO扩展到特征数量的维度
 
-        Ix_m = IO * w1_P1[aa_p]
-        Ix_p = IO * w1_M1[aa_m]
+        Ix_m = IO * w1_P1[aa_p]  # 对电影特征的梯度
+        Ix_p = IO * w1_M1[aa_m]  # 对用户特征的梯度
 
+        # 初始化梯度增量矩阵
         dw1_M1 = np.zeros((movie_num, num_feat))
         dw1_P1 = np.zeros((user_num, num_feat))
 
+        # 累加每个样本的梯度
         for ii in range(N):
             dw1_M1[aa_m[ii]] += Ix_m[ii]
             dw1_P1[aa_p[ii]] += Ix_p[ii]
 
+        # 更新特征矩阵
         w1_M1_inc = momentum * w1_M1_inc + epsilon * dw1_M1 / N
         w1_M1 -= w1_M1_inc
         w1_P1_inc = momentum * w1_P1_inc + epsilon * dw1_P1 / N
         w1_P1 -= w1_P1_inc
 
+    # 计算训练误差
     pred_out = np.sum(w1_M1[aa_m] * w1_P1[aa_p], axis=1)
     f_s = np.sum((pred_out - rating) ** 2)
-    err_train[epoch] = np.sqrt(f_s / N)
+    err_train[epoch] = np.sqrt(f_s / N)  # 计算训练集上的RMSE
 
+    # 在验证集上进行预测并计算误差
     aa_p = probe_vec["user_id"].values - 1
     aa_m = probe_vec["item_id"].values - 1
     rating = probe_vec["click"].values
 
     pred_out = np.sum(w1_M1[aa_m] * w1_P1[aa_p], axis=1) + mean_rating
-    pred_out = np.clip(pred_out, 1, 5)
+    pred_out = np.clip(pred_out, 1, 5)  # 将预测评分限制在1到5之间
 
-    err_valid[epoch] = np.sqrt(np.sum((pred_out - rating) ** 2) / pairs_pr)
+    err_valid[epoch] = np.sqrt(np.sum((pred_out - rating) ** 2) / pairs_pr)  # 计算验证集上的RMSE
 
-    print(
-        f"Epoch {epoch + 1}/{maxepoch}, Train RMSE: {err_train[epoch]:.4f}, Test RMSE: {err_valid[epoch]:.4f}"
-    )
+    # 打印每个epoch的训练和验证误差
+    print(f"Epoch {epoch + 1}/{maxepoch}, Train RMSE: {err_train[epoch]:.4f}, Test RMSE: {err_valid[epoch]:.4f}")
 
-# 绘制误差曲线
+# 绘制Loss曲线
 plt.plot(range(1, maxepoch + 1), err_train, label="Train Error", color="blue")
 plt.plot(range(1, maxepoch + 1), err_valid, label="Validation Error", color="red")
 plt.xlabel("Epoch")

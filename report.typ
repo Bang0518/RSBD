@@ -30,13 +30,28 @@ result.txt是算法得到的结果，即对test.txt中的用户一一进行Top-1
 == 实验环境 <environment>
 
 本实验使用的环境如下：
+- Ubuntu 22.04 LTS
 - Python 3.11.9
-- 
+- Packages in `requirement.txt`
 
 = 实现细节 <details>
 
-使用前确保已经安装了对应的字体！详细字体列表参考 #link("https://github.com/1bitbool/SimplePaper/tree/main")[README] 或模板文件。
-== 
+== 数据加载与预处理
+
+这部分导入了必要的库并设置全局参数，包括字体设置和超参数（学习率、动量参数、最大训练次数等）。
+
+```Python
+
+```
+== 数据集划分和稀疏度计算
+
+== 初始化矩阵参数
+
+== 训练模型
+
+== 计算Precision@10和Recall@10
+
+== 推荐结果生成与保存
 
 = 使用示例 <example>
 
