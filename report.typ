@@ -327,7 +327,6 @@ err_random = np.zeros(maxepoch)  # Random error 随机误差
 num_feat = 8  # Number of latent factors 隐因子数量
 N = 10000  # Number of training triplets per epoch 每次训练三元组的数量
 ```
-你可以 Typst 的语法对文本进行特殊标记，模板设定了几种语法的样式：*突出*、_强调_、引用@example。
 
 == 训练集表现
 
