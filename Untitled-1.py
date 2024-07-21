@@ -7,16 +7,17 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-
+# 设置字体为 Times New Roman
+plt.rcParams['font.family'] = 'Times New Roman'
 epsilon = 50  # Learning rate 学习率
-momentum = 0.7  # 动量优化参数
-epoch = 1  # 初始化epoch
-maxepoch = 30  # 总训练次数
-err_train = np.zeros(maxepoch)  # 训练误差
-err_valid = np.zeros(maxepoch)  # 验证误差
-err_random = np.zeros(maxepoch)
-num_feat = 10  # Rank 10 decomposition 隐因子数量
-N = 10000  # 每次训练三元组的数量
+momentum = 0.7  # Momentum parameter 动量优化参数
+epoch = 1  # Initial epoch 初始化epoch
+maxepoch = 30  # Total number of training epochs 总训练次数
+err_train = np.zeros(maxepoch)  # Training error 训练误差
+err_valid = np.zeros(maxepoch)  # Validation error 验证误差
+err_random = np.zeros(maxepoch)  # Random error 随机误差
+num_feat = 10  # Number of latent factors 隐因子数量
+N = 10000  # Number of training triplets per epoch 每次训练三元组的数量
 
 
 # In[2]:
@@ -222,26 +223,27 @@ print(f'Recall@10: {Re:.4f}, Precision@10: {Pre:.4f}')
 
 # 读取测试集数据
 test = pd.read_csv("data/test.txt", header=None, sep=' ')
-test.columns = ['user_id']
+test.columns = ['user_id']  # 设置列名为'user_id'
 
 # 定义常量
-j = 10
+k = 10  # 推荐的数量
 
 # 初始化变量
-record = []
+record = []  # 存储推荐结果的列表
 
 # 对每个测试用户进行推荐
 for i in test['user_id']:
-    user_i_rating = np.dot(w1_P1[i - 1, :], w1_M1.T) + mean_rating
-    used = data[data['user_id'] == i]['item_id'].values - 1  # 减1以匹配索引
-    user_i_rating[used] = 0
-    top_j_movies = np.argsort(user_i_rating)[-j:][::-1] + 1  # 加1以匹配实际的电影ID
-    record.append(top_j_movies)
+    user_i_rating = np.dot(w1_P1[i - 1, :], w1_M1.T) + mean_rating  
+    used = data[data['user_id'] == i]['item_id'].values - 1  
+    user_i_rating[used] = 0  # 将的评分设为0
+    top_k_movies = np.argsort(user_i_rating)[-k:][::-1] + 1 
+    record.append(top_k_movies)  # 将推荐结果加入列表
 
 # 将推荐结果与测试集用户结合
-record_df = pd.DataFrame(record, columns=[f'recommended_movie_{k}' for k in range(1, j + 1)])
-final_result = pd.concat([test, record_df], axis=1)
+record_df = pd.DataFrame(record, columns=[f'recommended_movie_{k}' for k in range(1, k + 1)])  # 创建推荐结果的DataFrame
+final_result = pd.concat([test, record_df], axis=1)  # 合并测试集用户和推荐结果
 
 # 保存到CSV文件
-final_result.to_csv('data/result.csv', index=False)
+final_result.to_csv('data/result.csv', index=False)  # 将最终结果保存为CSV文件
+
 
