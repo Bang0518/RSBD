@@ -37,12 +37,34 @@ result.txt是算法得到的结果，即对test.txt中的用户一一进行Top-1
   
 == 代码清单
 
+本项目的代码目录如下：
+
+```python
+project/
+│
+├── data/
+│   └── training.txt
+│   └── test.txt
+│   └── result.txt
+│
+├── images/
+│   └── num_feats_6.png
+│   └── num_feats_8.png
+│   └── num_feats_10.png
+│   └── baseline.png
+│
+├── baseline.py
+└── main.py
+```
+data目录包含输入、输出数据文件。
+images目录包含本报告中所有的图。
+baseline.py文件为基准模型的实现代码，用于与主模型进行比较。
+main.py文件为主程序文件，包含项目的核心逻辑。
 == 实验环境 <environment>
 
 本实验使用的环境如下：
 - Ubuntu 22.04 LTS
 - Python 3.11.9
-- Packages in `requirement.txt`
 
 = 实现细节 <details>
 
